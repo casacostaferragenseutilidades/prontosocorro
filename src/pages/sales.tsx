@@ -66,6 +66,8 @@ function NewSaleModal({ onClose }: { onClose: () => void }) {
   const [showNewCustomerForm, setShowNewCustomerForm] = useState(false);
   const [newCustomer, setNewCustomer] = useState({ name: "", phone: "", email: "" });
   const [newCustomerErrors, setNewCustomerErrors] = useState<{ name?: string; phone?: string }>({});
+  const [discount, setDiscount] = useState(0);
+  const [surcharge, setSurcharge] = useState(0);
 
   const dropdownRef = useRef<HTMLDivElement>(null);
 
@@ -81,8 +83,9 @@ function NewSaleModal({ onClose }: { onClose: () => void }) {
   const selectedCustomer = customers?.find((c) => c.id === customerId);
   const selectedMethod = PAYMENT_METHODS.find(m => m.value === paymentType)!;
   const needsCustomer = selectedMethod.needsCustomer;
-  const total = cart.reduce((acc, i) => acc + i.price * i.quantity, 0);
-  const installmentAmount = paymentType === "installment" ? total / numInstallments : 0;
+  const totalItems = cart.reduce((acc, i) => acc + i.price * i.quantity, 0);
+  const finalTotal = Math.max(0, totalItems - (Number(discount) || 0) + (Number(surcharge) || 0));
+  const installmentAmount = paymentType === "installment" ? finalTotal / numInstallments : 0;
 
   const filteredProducts = products?.filter(p =>
     p.status === "active" &&
@@ -136,7 +139,7 @@ function NewSaleModal({ onClose }: { onClose: () => void }) {
         const d = new Date(firstDueDate);
         d.setMonth(d.getMonth() + i);
         return {
-          amount: total / numInstallments,
+          amount: finalTotal / numInstallments,
           due_date: d.toISOString().split("T")[0],
           notes: `Parcela ${i + 1}/${numInstallments}`
         };
@@ -144,12 +147,12 @@ function NewSaleModal({ onClose }: { onClose: () => void }) {
 
       await createSaleMutation.mutateAsync({
         customer_id: customerId,
-        total_amount: total,
-        discount_amount: 0,
-        final_amount: total,
+        total_amount: totalItems,
+        discount_amount: Number(discount) || 0,
+        final_amount: finalTotal,
         payment_method: paymentType === "installment" ? "fiado" : paymentType as any,
         status: (paymentType === "fiado" || paymentType === "installment") ? "pending" : "completed",
-        notes: paymentType === "installment" ? `Parcelado em ${numInstallments}x` : null,
+        notes: (Number(surcharge) > 0 ? `Taxa: ${formatCurrency(surcharge)}. ` : "") + (paymentType === "installment" ? `Parcelado em ${numInstallments}x` : ""),
         installments_data,
         items: cart.map(item => ({
           product_id: item.productId,
@@ -344,10 +347,45 @@ function NewSaleModal({ onClose }: { onClose: () => void }) {
             </div>
 
             {/* Checkout footer */}
-            <div className="p-4 border-t border-border bg-card shrink-0 space-y-3">
+            <div className="p-4 border-t border-border bg-card shrink-0 space-y-4">
+              
+              {/* Discount and Surcharge Inputs */}
+              <div className="grid grid-cols-2 gap-3 pb-2 border-b border-border/50">
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Desconto (-)</label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                    <input 
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={discount || ""}
+                      onChange={e => setDiscount(Number(e.target.value) || 0)}
+                      className="w-full h-9 rounded-lg border border-border bg-background pl-8 pr-2 text-sm focus:outline-none focus:border-red-400 focus:ring-1 focus:ring-red-100 transition-all font-medium text-red-600"
+                      placeholder="0,00"
+                    />
+                  </div>
+                </div>
+                <div className="space-y-1">
+                  <label className="text-[10px] font-bold text-muted-foreground uppercase tracking-wider">Acréscimo (+)</label>
+                  <div className="relative">
+                    <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-xs text-muted-foreground">R$</span>
+                    <input 
+                      type="number"
+                      step="0.01"
+                      min="0"
+                      value={surcharge || ""}
+                      onChange={e => setSurcharge(Number(e.target.value) || 0)}
+                      className="w-full h-9 rounded-lg border border-border bg-background pl-8 pr-2 text-sm focus:outline-none focus:border-emerald-400 focus:ring-1 focus:ring-emerald-100 transition-all font-medium text-emerald-600"
+                      placeholder="0,00"
+                    />
+                  </div>
+                </div>
+              </div>
+
               <div className="flex items-center justify-between">
                 <span className="text-muted-foreground font-medium">Total</span>
-                <span className="text-2xl font-bold">{formatCurrency(total)}</span>
+                <span className="text-2xl font-bold">{formatCurrency(finalTotal)}</span>
               </div>
 
               {/* Payment methods — 3-column grid */}
@@ -399,11 +437,11 @@ function NewSaleModal({ onClose }: { onClose: () => void }) {
                     />
                   </div>
 
-                  {total > 0 && (
+                  {finalTotal > 0 && (
                     <div className="p-3 bg-white/60 rounded-lg border border-violet-100">
                       <div className="text-xs text-violet-600 leading-relaxed font-medium">
                         {numInstallments}x de <strong className="text-violet-900">{formatCurrency(installmentAmount)}</strong>
-                        <div className="mt-1 opacity-80">Total parcelado: {formatCurrency(total)}</div>
+                        <div className="mt-1 opacity-80">Total parcelado: {formatCurrency(finalTotal)}</div>
                       </div>
                     </div>
                   )}
