@@ -204,7 +204,7 @@ export default function Receivables() {
         <div className="px-6 py-5 border-b border-border bg-slate-50/50 flex items-center justify-between">
           <h2 className="text-xl font-bold">Listagem de Recebíveis</h2>
         </div>
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto w-full">
           <table className="w-full text-left border-collapse min-w-[750px]">
             <thead>
               <tr className="border-b border-border bg-secondary/10">
@@ -220,10 +220,10 @@ export default function Receivables() {
             </thead>
             <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">Carregando...</td></tr>
+              <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">Carregando...</td></tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-16 text-center">
+                <td colSpan={8} className="p-16 text-center">
                   <TrendingUp className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-30" />
                   <p className="text-lg font-medium">Nenhum lançamento encontrado.</p>
                 </td>
