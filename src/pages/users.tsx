@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Layout } from "@/components/layout";
 import { Card, Button, Badge, Input } from "@/components/ui-elements";
-import { useListProfiles, useUpdateProfile, getListProfilesQueryKey } from "@/lib/api";
+import { useListProfiles, useUpdateProfile, useCreateProfile, getListProfilesQueryKey } from "@/lib/api";
 import { Search, Plus, Users, ChevronRight, X, Shield, Mail, Phone, MapPin, Calendar, MoreVertical, UserCheck, UserX, Edit, Trash2 } from "lucide-react";
 import { useLocation } from "wouter";
 import { useQueryClient } from "@tanstack/react-query";

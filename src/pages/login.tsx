@@ -123,27 +123,6 @@ export default function Login() {
             </Button>
           </form>
 
-          <div className="mt-6 text-center">
-            <p className="text-sm text-gray-600">
-              Ainda não tem uma conta?{' '}
-              <button
-                className="text-blue-600 hover:text-blue-700 font-medium"
-                onClick={() => setLocation('/register')}
-              >
-                Cadastre-se
-              </button>
-            </p>
-          </div>
-
-          <div className="mt-8 pt-6 border-t border-gray-200">
-            <div className="text-center">
-              <p className="text-xs text-gray-500 mb-2">Acesso de demonstração:</p>
-              <div className="bg-gray-50 rounded-lg p-3 text-xs">
-                <p><strong>Email:</strong> admin@venda-varejo.com</p>
-                <p><strong>Senha:</strong> admin123</p>
-              </div>
-            </div>
-          </div>
         </Card>
       </div>
     </div>
