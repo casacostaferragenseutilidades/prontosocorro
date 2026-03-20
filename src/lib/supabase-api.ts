@@ -686,6 +686,26 @@ export const useListProfiles = () => {
   })
 }
 
+export const useCreateProfile = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async (profile: any) => {
+      const { data, error } = await supabase
+        .from('profiles')
+        .insert(profile)
+        .select()
+        .single()
+      if (error) throw error
+      return data
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getListProfilesQueryKey() })
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] })
+    }
+  })
+}
+
 export const useUpdateProfile = () => {
   const queryClient = useQueryClient()
   
