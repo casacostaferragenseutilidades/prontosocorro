@@ -60,12 +60,6 @@ function Router() {
       <Route path="/produtos">
         <ProtectedRoute component={Products} />
       </Route>
-      <Route path="/produtos/novo">
-        <ProtectedRoute component={ProductForm} />
-      </Route>
-      <Route path="/produtos/:id/editar">
-        <ProtectedRoute component={ProductForm} />
-      </Route>
       
       <Route path="/clientes">
         <ProtectedRoute component={Customers} />

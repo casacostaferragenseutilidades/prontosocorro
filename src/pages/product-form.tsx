@@ -10,7 +10,7 @@ import { useToast } from "@/hooks/use-toast";
 export default function ProductForm() {
   const params = useParams();
   const isEditing = !!params.id;
-  const productId = Number(params.id);
+  const productId = params.id as string;
   const [, setLocation] = useLocation();
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -28,7 +28,7 @@ export default function ProductForm() {
     stock_quantity: "",
     unit: "un",
     barcode: "",
-    status: "active"
+    status: "active" as "active" | "inactive"
   });
 
   useEffect(() => {
@@ -63,7 +63,7 @@ export default function ProductForm() {
       stock_quantity: parseInt(formData.stock_quantity),
       unit: formData.unit,
       barcode: formData.barcode || null,
-      status: formData.status
+      status: formData.status as "active" | "inactive"
     };
 
     try {
@@ -76,10 +76,10 @@ export default function ProductForm() {
       }
       queryClient.invalidateQueries({ queryKey: getListProductsQueryKey() });
       setLocation("/products");
-    } catch (error) {
+    } catch (error: unknown) {
       toast({ 
         title: "Erro ao salvar produto", 
-        description: error.message,
+        description: error instanceof Error ? error.message : "Erro desconhecido",
         variant: "destructive" 
       });
     }
@@ -151,20 +151,20 @@ export default function ProductForm() {
               />
               <Input 
                 label="Estoque Atual *" 
-                name="stock" 
+                name="stock_quantity" 
                 type="number" 
-                value={formData.stock} 
+                value={formData.stock_quantity} 
                 onChange={handleChange} 
                 placeholder="0" 
               />
 
               <Input 
-                label="URL da Imagem" 
-                name="imageUrl" 
-                value={formData.imageUrl} 
+                label="Código de Barras" 
+                name="barcode" 
+                value={formData.barcode} 
                 onChange={handleChange} 
-                placeholder="https://..." 
-                className="md:col-span-2"
+                placeholder="Ex: 789..." 
+                className="md:col-span-1"
               />
 
               <div className="md:col-span-2 flex flex-col gap-1.5">

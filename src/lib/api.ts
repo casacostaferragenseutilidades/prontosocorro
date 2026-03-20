@@ -7,17 +7,73 @@ import { useQueryClient, useQuery, useMutation } from '@tanstack/react-query'
 import { supabase } from './supabase'
 
 export const useGetCustomer = (id: string) => {
-  const { data: customers } = supabaseApi.useListCustomers()
-  return {
-    data: customers?.find((c: any) => c.id === id),
-    isLoading: false,
-    error: null
-  }
+  return useQuery({
+    queryKey: ['customer', id],
+    queryFn: async () => {
+      const { data, error } = await supabase
+        .from('customers')
+        .select(`
+          *,
+          sales (
+            *,
+            items:sale_items (
+              *,
+              product:products (name)
+            )
+          ),
+          installments:accounts_receivable (*)
+        `)
+        .eq('id', id)
+        .single()
+      
+      if (error) throw error
+      if (!data) return null
+
+      const mappedInstallments = (data.installments || []).map((i: any) => ({
+        id: i.id,
+        saleId: i.sale_id,
+        amount: Number(i.amount),
+        dueDate: i.due_date,
+        status: i.status,
+        paidAt: i.payment_date,
+        installmentNumber: i.installment_number,
+        totalInstallments: i.total_installments
+      }));
+
+      const calculatedDebt = mappedInstallments
+        .filter(i => i.status === 'pending' || i.status === 'overdue')
+        .reduce((sum, inst) => sum + inst.amount, 0);
+
+      // Mapear dados para o formato esperado pelo frontend
+      return {
+        ...data,
+        totalDebt: calculatedDebt,
+        sales: (data.sales || []).map((s: any) => ({
+          id: s.id,
+          createdAt: s.created_at,
+          paymentType: s.payment_method,
+          total: Number(s.final_amount),
+          status: s.status,
+          numInstallments: s.num_installments,
+          remainingDebt: s.payment_method === 'fiado' && s.status === 'pending' ? Number(s.final_amount) : 0,
+          items: (s.items || []).map((i: any) => ({
+            id: i.id,
+            quantity: Number(i.quantity),
+            productName: i.product?.name || "Produto",
+            unitPrice: Number(i.unit_price || 0),
+            totalPrice: Number(i.total_price || 0)
+          }))
+        })),
+        installments: mappedInstallments
+      }
+    },
+    enabled: !!id
+  })
 }
 
 export const getGetCustomerQueryKey = (id: string) => ['customer', id]
 
-export const useGetProduct = (id: number, options?: any) => {
+export const useGetProduct = (id: string, options?: any) => {
   return useQuery({
     queryKey: ['product', id],
     queryFn: async () => {

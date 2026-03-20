@@ -13,7 +13,7 @@ import {
   getGetDashboardQueryKey,
   getListSalesQueryKey
 } from "@/lib/api";
-import { TrendingUp, RefreshCw, Calendar, User, Search, CreditCard, CalendarRange } from "lucide-react";
+import { TrendingUp, RefreshCw, Calendar, User, Search, CreditCard, CalendarRange, CheckCircle2 } from "lucide-react";
 
 type Receivable = {
   id: string;
@@ -211,8 +211,9 @@ export default function Receivables() {
                 <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Tipo</th>
                 <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Cliente</th>
                 <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Descrição</th>
-                <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Vencimento</th>
-                <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Status</th>
+                 <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Vencimento</th>
+                 <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Pagamento</th>
+                 <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Status</th>
                 <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider text-right">Valor</th>
                 <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider text-right">Ação</th>
               </tr>
@@ -248,16 +249,26 @@ export default function Receivables() {
                     </div>
                   </td>
                   <td className="p-4 text-sm text-muted-foreground">{r.description}</td>
-                  <td className="p-4">
-                    {r.dueDate ? (
-                      <div className="flex items-center gap-1.5 text-sm">
-                        <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
-                        <span className={r.status === "overdue" ? "text-red-600 font-semibold" : ""}>{formatDate(r.dueDate)}</span>
-                      </div>
-                    ) : (
-                      <span className="text-muted-foreground text-sm italic">Sem vencimento</span>
-                    )}
-                  </td>
+                   <td className="p-4">
+                     {r.dueDate ? (
+                       <div className="flex items-center gap-1.5 text-sm">
+                         <Calendar className="w-3.5 h-3.5 text-muted-foreground" />
+                         <span className={r.status === "overdue" ? "text-red-600 font-semibold" : ""}>{formatDate(r.dueDate)}</span>
+                       </div>
+                     ) : (
+                       <span className="text-muted-foreground text-sm italic">Sem vencimento</span>
+                     )}
+                   </td>
+                   <td className="p-4">
+                     {r.paidAt ? (
+                       <div className="flex items-center gap-1.5 text-sm text-green-600 font-medium">
+                         <CheckCircle2 className="w-3.5 h-3.5" />
+                         {formatDate(r.paidAt)}
+                       </div>
+                     ) : (
+                       <span className="text-muted-foreground text-sm italic">-</span>
+                     )}
+                   </td>
                   <td className="p-4">
                     <Badge variant={STATUS_VARIANT[r.status] ?? "default"}>{STATUS_LABEL[r.status] ?? r.status}</Badge>
                   </td>

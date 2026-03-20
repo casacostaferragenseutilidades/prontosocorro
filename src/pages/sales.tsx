@@ -489,7 +489,7 @@ export default function Sales() {
               <DollarSign className="w-12 h-12 text-blue-600" />
             </div>
             <p className="text-sm font-medium text-muted-foreground mb-1 uppercase tracking-wider">Volume Total</p>
-            <p className="text-3xl font-bold text-foreground">{formatCurrency((sales || []).reduce((acc, s) => acc + s.total, 0))}</p>
+            <p className="text-3xl font-bold text-foreground">{formatCurrency((sales || []).reduce((acc, s) => acc + Number(s.final_amount), 0))}</p>
           </Card>
 
           <Card className="p-6 bg-white border-amber-100 shadow-lg relative overflow-hidden group">
@@ -498,7 +498,7 @@ export default function Sales() {
             </div>
             <p className="text-sm font-medium text-muted-foreground mb-1 uppercase tracking-wider">Pendente</p>
             <p className="text-3xl font-bold text-foreground">
-              {formatCurrency((sales || []).filter(s => s.status === 'pending').reduce((acc, s) => acc + s.total, 0))}
+              {formatCurrency((sales || []).filter(s => s.status === 'pending').reduce((acc, s) => acc + Number(s.final_amount), 0))}
             </p>
           </Card>
 
@@ -508,7 +508,7 @@ export default function Sales() {
             </div>
             <p className="text-sm font-medium text-muted-foreground mb-1 uppercase tracking-wider">Ticket Médio</p>
             <p className="text-3xl font-bold text-foreground">
-              {formatCurrency(sales && sales.length > 0 ? sales.reduce((acc, s) => acc + s.total, 0) / sales.length : 0)}
+              {formatCurrency(sales && sales.length > 0 ? (sales.reduce((acc, s) => acc + Number(s.final_amount), 0) / sales.length) : 0)}
             </p>
           </Card>
         </div>
@@ -561,7 +561,10 @@ export default function Sales() {
                     </Badge>
                   </td>
                   <td className="p-4">
-                    <Badge variant={sale.status === "completed" ? "success" : sale.status === "pending" ? "warning" : "default"}>
+                    <Badge 
+                      variant={sale.status === "completed" ? "success" : sale.status === "pending" ? "warning" : "default"}
+                      className={sale.status === "pending" ? "bg-amber-100 text-amber-800 border-amber-200" : ""}
+                    >
                       {sale.status === "completed" ? "Finalizada" : sale.status === "pending" ? "Pendente" : sale.status}
                     </Badge>
                   </td>

@@ -3,18 +3,20 @@ import { Layout } from "@/components/layout";
 import { Card, Badge, Button } from "@/components/ui-elements";
 import { useGetDashboard } from "@/lib/api";
 import { formatCurrency, formatDate } from "@/lib/utils";
-import { DollarSign, TrendingUp, AlertTriangle, Package, Loader2, ShoppingCart, CreditCard, Activity, Target, Zap, Users } from "lucide-react";
-import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, LineChart, Line, Area, AreaChart } from "recharts";
+import { DollarSign, TrendingUp, AlertTriangle, Package, Loader2, ShoppingCart, CreditCard, Activity, Users, ChevronRight } from "lucide-react";
+import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell, Area, AreaChart } from "recharts";
+import { useLocation } from "wouter";
 
 export default function Dashboard() {
   const { data, isLoading, error } = useGetDashboard();
+  const [, setLocation] = useLocation();
 
   if (isLoading) return (
     <Layout>
       <div className="flex-1 flex items-center justify-center min-h-[60vh]">
         <div className="text-center">
           <Loader2 className="w-12 h-12 text-primary animate-spin mx-auto mb-4" />
-          <p className="text-muted-foreground">Carregando dashboard...</p>
+          <p className="text-muted-foreground font-medium">Sincronizando dados reais...</p>
         </div>
       </div>
     </Layout>
@@ -26,320 +28,214 @@ export default function Dashboard() {
         <div className="inline-flex items-center justify-center w-16 h-16 bg-destructive/10 rounded-full mb-4">
           <AlertTriangle className="w-8 h-8 text-destructive" />
         </div>
-        <h2 className="text-2xl font-bold text-foreground mb-2">Erro ao carregar dashboard</h2>
-        <p className="text-muted-foreground">Tente novamente mais tarde.</p>
+        <h2 className="text-2xl font-bold text-foreground mb-2">Erro ao carregar o Dashboard</h2>
+        <p className="text-muted-foreground">Tente novamente ou verifique sua conexão.</p>
       </div>
     </Layout>
   );
 
-  const statCards = [
+  const stats = [
     { 
-      title: "Vendas Hoje", 
+      title: "Vendas hoje", 
       value: formatCurrency(data.totalSalesToday), 
       icon: DollarSign, 
       color: "text-emerald-600", 
-      bg: "bg-gradient-to-r from-emerald-500/10 to-emerald-600/10",
-      border: "border-emerald-200",
-      trend: "+12.5%",
-      iconBg: "bg-emerald-100"
+      bg: "bg-emerald-50",
+      trend: "Tempo real"
     },
     { 
-      title: "Vendas Mês", 
+      title: "Faturamento Mensal", 
       value: formatCurrency(data.totalSalesMonth), 
       icon: TrendingUp, 
       color: "text-blue-600", 
-      bg: "bg-gradient-to-r from-blue-500/10 to-blue-600/10",
-      border: "border-blue-200",
-      trend: "+8.2%",
-      iconBg: "bg-blue-100"
+      bg: "bg-blue-50",
+      trend: "Meta 30 dias"
     },
     { 
       title: "Fiado a Receber", 
       value: formatCurrency(data.totalDebtOutstanding), 
       icon: AlertTriangle, 
       color: "text-amber-600", 
-      bg: "bg-gradient-to-r from-amber-500/10 to-amber-600/10",
-      border: "border-amber-200",
-      trend: "-3.1%",
-      iconBg: "bg-amber-100"
-    },
-    { 
-      title: "Clientes com Dívida", 
-      value: data.customersWithDebt, 
-      icon: Users, 
-      color: "text-purple-600", 
-      bg: "bg-gradient-to-r from-purple-500/10 to-purple-600/10",
-      border: "border-purple-200",
-      trend: "+2",
-      iconBg: "bg-purple-100"
+      bg: "bg-amber-50",
+      trend: `${data.customersWithDebt} clientes`
     },
     { 
       title: "Estoque Baixo", 
       value: data.lowStockCount, 
       icon: Package, 
       color: "text-red-600", 
-      bg: "bg-gradient-to-r from-red-500/10 to-red-600/10",
-      border: "border-red-200",
-      trend: "0",
-      iconBg: "bg-red-100"
+      bg: "bg-red-50",
+      trend: "Itens críticos"
     },
-  ];
-
-  // Enhanced data for charts
-  const salesData = [
-    { month: "Jan", sales: 4000, orders: 240 },
-    { month: "Fev", sales: 3000, orders: 180 },
-    { month: "Mar", sales: 5000, orders: 320 },
-    { month: "Abr", sales: 4500, orders: 280 },
-    { month: "Mai", sales: 6000, orders: 380 },
-    { month: "Jun", sales: 5500, orders: 350 },
-  ];
-
-  const revenueData = [
-    { name: "Seg", revenue: 1200, profit: 800 },
-    { name: "Ter", revenue: 1800, profit: 1200 },
-    { name: "Qua", revenue: 1500, profit: 900 },
-    { name: "Qui", revenue: 2200, profit: 1400 },
-    { name: "Sex", revenue: 2800, profit: 1800 },
-    { name: "Sab", revenue: 3200, profit: 2100 },
-    { name: "Dom", revenue: 2100, profit: 1300 },
   ];
 
   return (
     <Layout>
-      <div className="space-y-8">
-        {/* Header with gradient background */}
-        <div className="relative overflow-hidden rounded-2xl bg-gradient-to-r from-blue-600 via-blue-700 to-indigo-800 p-8 text-white shadow-2xl">
-          <div className="absolute top-0 right-0 -mt-4 -mr-4 w-32 h-32 bg-white/10 rounded-full blur-3xl"></div>
-          <div className="absolute bottom-0 left-0 -mb-4 -ml-4 w-24 h-24 bg-white/5 rounded-full blur-2xl"></div>
-          
-          <div className="relative z-10">
-            <div className="flex items-center justify-between">
-              <div>
-                <h1 className="text-4xl font-bold mb-2">Visão Geral</h1>
-                <p className="text-blue-100 text-lg">Acompanhe os resultados da sua loja em tempo real</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="text-right">
-                  <p className="text-sm text-blue-100">Meta Mensal</p>
-                  <p className="text-2xl font-bold">R$ 50.000</p>
-                </div>
-                <div className="w-12 h-12 bg-white/20 rounded-xl flex items-center justify-center">
-                  <Target className="w-6 h-6" />
-                </div>
-              </div>
-            </div>
+      <div className="space-y-8 pb-10">
+        {/* Header Section */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-border pb-6">
+          <div>
+            <h1 className="text-4xl font-extrabold tracking-tight text-foreground">Dashboard Geral</h1>
+            <p className="text-muted-foreground mt-1 text-lg font-medium">Análise de performance e operações em tempo real.</p>
+          </div>
+          <div className="flex gap-3">
+            <Button onClick={() => setLocation("/vendas")} className="bg-primary shadow-lg shadow-primary/20 hover:scale-105 transition-transform font-bold">
+              <ShoppingCart className="w-4 h-4 mr-2" /> Venda Rápida
+            </Button>
           </div>
         </div>
 
-        {/* Enhanced Stats Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5 gap-6">
-          {statCards.map((stat, i) => (
-            <Card key={i} className={`relative overflow-hidden border ${stat.border} bg-white shadow-lg hover:shadow-xl transition-all duration-300 group`}>
-              {/* Gradient overlay */}
-              <div className={`absolute inset-0 ${stat.bg} opacity-50`}></div>
-              
-              <div className="relative p-6">
-                <div className="flex items-start justify-between mb-4">
-                  <div className={`w-14 h-14 ${stat.iconBg} rounded-2xl flex items-center justify-center shadow-lg`}>
-                    <stat.icon className={`w-7 h-7 ${stat.color}`} />
-                  </div>
-                  <div className={`text-right`}>
-                    <span className={`text-xs font-semibold px-2 py-1 rounded-full ${
-                      parseFloat(stat.trend) > 0 ? 'bg-emerald-100 text-emerald-700' : 
-                      parseFloat(stat.trend) < 0 ? 'bg-red-100 text-red-700' : 
-                      'bg-gray-100 text-gray-700'
-                    }`}>
-                      {stat.trend}
-                    </span>
-                  </div>
+        {/* Real Stats Cards */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
+          {stats.map((stat, i) => (
+            <Card key={i} className="p-6 border-border/50 hover:shadow-2xl hover:border-primary/20 transition-all duration-300 group">
+              <div className="flex justify-between items-start mb-4">
+                <div className={`${stat.bg} p-3 rounded-2xl group-hover:scale-110 transition-transform`}>
+                  <stat.icon className={`w-6 h-6 ${stat.color}`} />
                 </div>
-                
-                <div>
-                  <p className="text-sm font-medium text-gray-600 mb-2">{stat.title}</p>
-                  <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
-                </div>
+                <Badge variant="outline" className="text-[10px] font-bold uppercase tracking-wider opacity-70">{stat.trend}</Badge>
               </div>
-              
-              {/* Hover effect */}
-              <div className="absolute inset-0 bg-gradient-to-r from-transparent via-white/10 to-transparent -translate-x-full group-hover:translate-x-full transition-transform duration-1000"></div>
+              <div>
+                <p className="text-sm font-bold text-muted-foreground uppercase tracking-widest mb-1">{stat.title}</p>
+                <p className="text-3xl font-extrabold text-foreground tracking-tight">{stat.value}</p>
+              </div>
             </Card>
           ))}
         </div>
 
-        {/* Enhanced Charts Section */}
+        {/* Main Charts Row */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Main Chart */}
-          <Card className="p-8 lg:col-span-2 shadow-xl border-gray-100">
-            <div className="flex items-center justify-between mb-8">
+          {/* Main Revenue Chart */}
+          <Card className="lg:col-span-2 p-8 shadow-xl border-border/40 overflow-hidden relative">
+            <div className="flex items-center justify-between mb-8 relative z-10">
               <div>
-                <h2 className="text-2xl font-bold text-gray-900">Análise de Vendas</h2>
-                <p className="text-gray-600 mt-1">Tendência dos últimos 6 meses</p>
+                <h2 className="text-2xl font-bold">Histórico de Faturamento</h2>
+                <p className="text-muted-foreground text-sm font-medium">Vendas dos últimos 30 dias agrupadas por data.</p>
               </div>
-              <div className="flex gap-2">
-                <Button variant="outline" size="sm">Mês</Button>
-                <Button variant="outline" size="sm">Ano</Button>
-              </div>
+              <Activity className="w-8 h-8 text-primary/20" />
             </div>
             
-            <div className="h-[400px] w-full">
+            <div className="h-[400px] w-full relative z-10">
               <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={salesData} margin={{ top: 10, right: 10, left: 0, bottom: 0 }}>
+                <AreaChart data={data.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                   <defs>
-                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.8}/>
+                    <linearGradient id="colorSales" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="5%" stopColor="#3B82F6" stopOpacity={0.2}/>
                       <stop offset="95%" stopColor="#3B82F6" stopOpacity={0}/>
                     </linearGradient>
                   </defs>
-                  <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-                  <XAxis dataKey="month" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
+                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="rgba(0,0,0,0.05)" />
+                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 600}} dy={10} />
+                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#94a3b8', fontSize: 11, fontWeight: 600}} />
                   <Tooltip 
-                    contentStyle={{borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 20px rgba(0,0,0,0.1)'}}
+                    contentStyle={{borderRadius: '16px', border: 'none', boxShadow: '0 10px 40px rgba(0,0,0,0.1)', fontWeight: 'bold'}}
+                    formatter={(val: number) => [formatCurrency(val), 'Vendas']}
                   />
-                  <Area 
-                    type="monotone" 
-                    dataKey="sales" 
-                    stroke="#3B82F6" 
-                    fillOpacity={1} 
-                    fill="url(#colorRevenue)" 
-                    strokeWidth={2}
-                  />
+                  <Area type="monotone" dataKey="sales" stroke="#3B82F6" strokeWidth={4} fillOpacity={1} fill="url(#colorSales)" />
                 </AreaChart>
               </ResponsiveContainer>
             </div>
           </Card>
 
-          {/* Revenue Stats */}
-          <div className="space-y-6">
-            <Card className="p-6 shadow-xl border-gray-100">
-              <div className="flex items-center justify-between mb-6">
-                <h3 className="text-xl font-bold text-gray-900">Receita Semanal</h3>
-                <Activity className="w-5 h-5 text-gray-400" />
-              </div>
-              
-              <div className="space-y-4">
-                {revenueData.slice(0, 5).map((day, index) => (
-                  <div key={index} className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
-                        index === 0 ? 'bg-blue-100' : 
-                        index === 1 ? 'bg-emerald-100' : 
-                        index === 2 ? 'bg-purple-100' : 
-                        index === 3 ? 'bg-amber-100' : 
-                        'bg-pink-100'
-                      }`}>
-                        <span className="text-xs font-bold">
-                          {day.name.substring(0, 3)}
-                        </span>
+          {/* Top Products */}
+          <Card className="p-8 shadow-xl border-border/40">
+             <div className="flex items-center justify-between mb-8">
+              <h2 className="text-2xl font-bold">Produtos Top</h2>
+              <Badge variant="success">Top 5</Badge>
+            </div>
+            <div className="space-y-6">
+              {data.topProducts.length === 0 ? (
+                <div className="text-center py-10 text-muted-foreground italic">Sem vendas registradas</div>
+              ) : (
+                data.topProducts.map((p: any, i: number) => (
+                  <div key={i} className="flex items-center justify-between group">
+                    <div className="flex items-center gap-4">
+                      <div className="w-10 h-10 rounded-xl bg-slate-100 flex items-center justify-center font-bold text-slate-600 transition-colors group-hover:bg-primary group-hover:text-white">
+                        {i + 1}
                       </div>
                       <div>
-                        <p className="font-semibold text-gray-900">{formatCurrency(day.revenue)}</p>
-                        <p className="text-sm text-gray-500">Lucro: {formatCurrency(day.profit)}</p>
+                        <p className="font-bold text-foreground text-sm truncate max-w-[120px]">{p.product_name}</p>
+                        <p className="text-xs text-muted-foreground">{p.quantity} vendidos</p>
+                      </div>
+                    </div>
+                    <p className="font-extrabold text-primary">{formatCurrency(p.total_price)}</p>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="mt-8 pt-6 border-t border-border">
+              <Button onClick={() => setLocation("/produtos")} variant="ghost" className="w-full justify-between font-bold text-primary hover:bg-primary/5">
+                Gerenciar Estoque <ChevronRight className="w-4 h-4" />
+              </Button>
+            </div>
+          </Card>
+        </div>
+
+        {/* Bottom Row */}
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Recent Sales with Real Data */}
+          <Card className="shadow-xl border-border/40 overflow-hidden">
+            <div className="p-8 border-b border-border flex items-center justify-between bg-slate-50/50">
+              <h2 className="text-2xl font-bold">Transações Recentes</h2>
+              <Button onClick={() => setLocation("/vendas")} variant="outline" size="sm" className="font-bold">Ver Tudo</Button>
+            </div>
+            <div className="divide-y divide-border">
+              {data.recentSales.length === 0 ? (
+                <div className="p-16 text-center text-muted-foreground italic">Nenhuma venda encontrada</div>
+              ) : (
+                data.recentSales.map((sale: any) => (
+                  <div key={sale.id} className="p-6 flex items-center justify-between hover:bg-slate-50 transition-colors cursor-pointer" onClick={() => setLocation("/vendas")}>
+                    <div className="flex items-center gap-4">
+                      <div className="w-12 h-12 bg-primary/10 rounded-xl flex items-center justify-center text-primary font-bold">
+                        {sale.customer?.name?.substring(0, 2).toUpperCase() || "CB"}
+                      </div>
+                      <div>
+                        <p className="font-bold text-foreground">{sale.customer?.name || "Consumidor Final"}</p>
+                        <p className="text-xs text-muted-foreground font-medium">{formatDate(sale.created_at, true)}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p className="text-sm text-gray-500">85%</p>
+                      <p className="font-extrabold text-lg tracking-tight text-foreground">{formatCurrency(sale.final_amount)}</p>
+                      <Badge variant={sale.status === 'completed' || sale.status === 'paid' ? 'success' : 'warning'} className="text-[10px] uppercase font-bold px-2 py-0">
+                        {sale.status === 'completed' || sale.status === 'paid' ? 'Pago' : 'Pendente'}
+                      </Badge>
                     </div>
                   </div>
-                ))}
-              </div>
-            </Card>
+                ))
+              )}
+            </div>
+          </Card>
 
-            {/* Quick Actions */}
-            <Card className="p-6 shadow-xl border-gray-100">
-              <h3 className="text-xl font-bold text-gray-900 mb-6">Ações Rápidas</h3>
-              <div className="space-y-3">
-                <Button className="w-full justify-start gap-3" variant="outline">
-                  <ShoppingCart className="w-5 h-5" />
-                  Nova Venda
-                </Button>
-                <Button className="w-full justify-start gap-3" variant="outline">
-                  <Users className="w-5 h-5" />
-                  Cadastrar Cliente
-                </Button>
-                <Button className="w-full justify-start gap-3" variant="outline">
-                  <Package className="w-5 h-5" />
-                  Adicionar Produto
-                </Button>
-                <Button className="w-full justify-start gap-3" variant="outline">
-                  <CreditCard className="w-5 h-5" />
-                  Registrar Pagamento
-                </Button>
+          {/* Quick Stats Grid */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+            <Card className="p-8 bg-gradient-to-br from-violet-600 to-indigo-700 text-white shadow-xl flex flex-col justify-between">
+              <div>
+                <Users className="w-10 h-10 mb-4 opacity-70" />
+                <h3 className="text-xl font-bold mb-1">Base de Clientes</h3>
+                <p className="text-violet-100 text-sm">Total de cadastros ativos.</p>
+              </div>
+              <p className="text-5xl font-black mt-6">{data.totalCustomers}</p>
+            </Card>
+            <Card className="p-8 bg-gradient-to-br from-emerald-600 to-teal-700 text-white shadow-xl flex flex-col justify-between">
+              <div>
+                <Package className="w-10 h-10 mb-4 opacity-70" />
+                <h3 className="text-xl font-bold mb-1">Produtos no Mix</h3>
+                <p className="text-emerald-100 text-sm">Diversidade do catálogo.</p>
+              </div>
+              <p className="text-5xl font-black mt-6">{data.totalProducts}</p>
+            </Card>
+            <Card className="p-8 lg:col-span-2 bg-slate-900 text-white shadow-xl border-none relative overflow-hidden group">
+               <div className="relative z-10 flex items-center justify-between">
+                <div className="space-y-2">
+                  <h3 className="text-2xl font-bold">Resumo Financeiro</h3>
+                  <p className="text-slate-400 font-medium">Contas e recebíveis pendentes hoje.</p>
+                  <p className="text-4xl font-black text-amber-400 mt-4">{formatCurrency(data.pendingReceivables)}</p>
+                </div>
+                <CreditCard className="w-20 h-20 text-white/5 absolute -right-4 -bottom-4 group-hover:scale-110 transition-transform" />
               </div>
             </Card>
           </div>
         </div>
-
-        {/* Products Chart */}
-        <Card className="p-8 shadow-xl border-gray-100">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-bold text-gray-900">Produtos Mais Vendidos</h2>
-              <p className="text-gray-600 mt-1">Top 5 produtos este mês</p>
-            </div>
-            <Badge variant="success">Atualizado</Badge>
-          </div>
-          
-          <div className="h-[300px] w-full">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={data.topProducts} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
-                <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f0f0f0" />
-                <XAxis dataKey="productName" axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
-                <YAxis axisLine={false} tickLine={false} tick={{fill: '#6b7280', fontSize: 12}} />
-                <Tooltip 
-                  cursor={{fill: '#f3f4f6'}}
-                  contentStyle={{borderRadius: '12px', border: '1px solid #e5e7eb', boxShadow: '0 4px 20px rgba(0,0,0,0.1)'}}
-                />
-                <Bar dataKey="totalSold" radius={[8, 8, 0, 0]}>
-                  {data.topProducts.map((_, index) => {
-                    const colors = ['#3B82F6', '#10B981', '#F59E0B', '#EF4444', '#8B5CF6'];
-                    return <Cell key={`cell-${index}`} fill={colors[index % colors.length]} />;
-                  })}
-                </Bar>
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
-        </Card>
-
-        {/* Recent Sales */}
-        <Card className="shadow-xl border-gray-100">
-          <div className="p-8 border-b border-gray-100">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-bold text-gray-900">Vendas Recentes</h2>
-              <Button variant="outline" size="sm">Ver Todas</Button>
-            </div>
-          </div>
-          <div className="divide-y divide-gray-100">
-            {data.recentSales.length === 0 ? (
-              <div className="p-16 text-center">
-                <ShoppingCart className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <h3 className="text-lg font-semibold text-gray-900 mb-2">Nenhuma venda recente</h3>
-                <p className="text-gray-600">Comece registrando suas vendas</p>
-              </div>
-            ) : (
-              data.recentSales.slice(0, 5).map((sale) => (
-                <div key={sale.id} className="p-6 flex items-center justify-between hover:bg-gray-50 transition-colors">
-                  <div className="flex items-center gap-4">
-                    <div className="w-12 h-12 bg-gradient-to-r from-blue-500 to-blue-600 rounded-xl flex items-center justify-center text-white font-bold">
-                      {sale.customerName?.substring(0, 2).toUpperCase()}
-                    </div>
-                    <div>
-                      <p className="font-semibold text-gray-900">{sale.customerName || "Cliente Balcão"}</p>
-                      <p className="text-sm text-gray-600">{formatDate(sale.createdAt, true)}</p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="font-bold text-lg text-gray-900">{formatCurrency(sale.total)}</p>
-                    <Badge variant={sale.status === 'paid' ? 'success' : sale.status === 'pending' ? 'warning' : 'outline'}>
-                      {sale.status === 'paid' ? 'Pago' : sale.status === 'pending' ? 'Pendente' : 'Parcial'}
-                    </Badge>
-                  </div>
-                </div>
-              ))
-            )}
-          </div>
-        </Card>
       </div>
     </Layout>
   );

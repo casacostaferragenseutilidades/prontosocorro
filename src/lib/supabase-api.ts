@@ -38,9 +38,70 @@ export const useGetDashboard = () => {
   return useQuery({
     queryKey: ['dashboard'],
     queryFn: async () => {
-      const { data, error } = await supabase.rpc('get_dashboard_stats')
-      if (error) throw error
-      return data && data.length > 0 ? data[0] : null
+      // 1. Estatísticas Básicas via RPC
+      const { data: stats, error: rpcError } = await supabase.rpc('get_dashboard_stats')
+      if (rpcError) throw rpcError
+      const s = stats && stats.length > 0 ? stats[0] : {}
+
+      // 2. Vendas Recentes (últimas 7)
+      const { data: recentSales } = await supabase
+        .from('sales')
+        .select(`
+          *,
+          customer:customers(name)
+        `)
+        .order('created_at', { ascending: false })
+        .limit(7)
+
+      // 3. Dados para Gráfico (últimos 30 dias)
+      const thirtyDaysAgo = new Date();
+      thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+      
+      const { data: chartSales } = await supabase
+        .from('sales')
+        .select('created_at, final_amount')
+        .eq('status', 'completed')
+        .gte('created_at', thirtyDaysAgo.toISOString())
+        .order('created_at', { ascending: true });
+
+      // Agrupar por data para o gráfico
+      const salesByDate: Record<string, number> = {};
+      (chartSales || []).forEach(sale => {
+        const date = new Date(sale.created_at).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' });
+        salesByDate[date] = (salesByDate[date] || 0) + Number(sale.final_amount);
+      });
+
+      const chartData = Object.entries(salesByDate).map(([name, sales]) => ({ name, sales }));
+
+      // 4. Top Produtos
+      const { data: topProductsRaw } = await supabase
+        .from('sale_items')
+        .select(`
+          quantity,
+          total_price,
+          product:products(name)
+        `)
+        .order('quantity', { ascending: false })
+        .limit(5);
+
+      return {
+        totalSales: Number(s.total_sales || 0),
+        totalCustomers: Number(s.total_customers || 0),
+        totalProducts: Number(s.total_products || 0),
+        pendingReceivables: Number(s.pending_receivables || 0),
+        totalSalesToday: Number(s.total_sales_today || 0),
+        totalSalesMonth: Number(s.total_sales_month || 0),
+        totalDebtOutstanding: Number(s.pending_receivables || 0),
+        customersWithDebt: Number(s.customers_with_debt || 0),
+        lowStockCount: Number(s.low_stock_count || 0),
+        recentSales: recentSales || [],
+        chartData: chartData.length > 0 ? chartData : [{ name: 'Sem dados', sales: 0 }],
+        topProducts: (topProductsRaw || []).map((p: any) => ({
+          product_name: p.product?.name || "Produto",
+          quantity: p.quantity,
+          total_price: p.total_price
+        }))
+      }
     }
   })
 }
@@ -309,12 +370,32 @@ export const useCreateSale = () => {
           .from('sale_items')
           .insert(itemsToInsert)
         if (itemsError) throw itemsError
+
+        // 2.1 Descontar estoque automaticamente
+        for (const item of items) {
+          try {
+            const { data: prod } = await supabase
+              .from('products')
+              .select('stock_quantity')
+              .eq('id', item.product_id)
+              .single();
+            
+            if (prod) {
+              await supabase
+                .from('products')
+                .update({ stock_quantity: (prod.stock_quantity || 0) - item.quantity })
+                .eq('id', item.product_id);
+            }
+          } catch (err) {
+            console.error("Erro ao dar baixa no estoque do produto:", item.product_id, err);
+          }
+        }
       }
 
       // 3. Gerar Contas a Receber (Automação Financeira)
+      const records: AccountsReceivableInsert[] = [];
+      
       if (sale.payment_method === 'fiado' || installments_data) {
-        const records: AccountsReceivableInsert[] = [];
-        
         if (installments_data && installments_data.length > 0) {
           // Parcelamento manual
           installments_data.forEach((inst, idx) => {
@@ -340,13 +421,25 @@ export const useCreateSale = () => {
             notes: sale.notes
           });
         }
+      } else if (sale.status === 'completed') {
+        // Vendas à vista já finalizadas (Dinheiro, Pix, Cartão) - registrar como recebido
+        records.push({
+          customer_id: sale.customer_id,
+          sale_id: saleData.id,
+          amount: sale.final_amount,
+          due_date: new Date().toISOString().split('T')[0],
+          payment_date: new Date().toISOString().split('T')[0],
+          description: `Venda à Vista (${sale.payment_method}) - #${saleData.id.substring(0, 8)}`,
+          status: 'paid',
+          notes: sale.notes
+        });
+      }
 
-        if (records.length > 0) {
-          const { error: receivError } = await supabase
-            .from('accounts_receivable')
-            .insert(records)
-          if (receivError) throw receivError
-        }
+      if (records.length > 0) {
+        const { error: receivError } = await supabase
+          .from('accounts_receivable')
+          .insert(records)
+        if (receivError) throw receivError
       }
 
       return saleData
