@@ -28,7 +28,8 @@ export default function UserManagement() {
     name: '',
     email: '',
     phone: '',
-    role: 'user'
+    role: 'user',
+    password: ''
   });
 
   const handleOpenModal = (user: any = null) => {
@@ -38,7 +39,8 @@ export default function UserManagement() {
         name: user.name || '',
         email: user.email || '',
         phone: user.phone || '',
-        role: user.role || 'user'
+        role: user.role || 'user',
+        password: ''
       });
     } else {
       setEditingUser(null);
@@ -46,15 +48,20 @@ export default function UserManagement() {
         name: '',
         email: '',
         phone: '',
-        role: 'user'
+        role: 'user',
+        password: ''
       });
     }
     setIsModalOpen(true);
   };
 
   const handleSubmit = async () => {
-    if (!formData.name || !formData.email || !formData.phone) {
-      toast({ title: "Campos obrigatórios", description: "Por favor, preencha nome, email e telefone.", variant: "destructive" });
+    if (!formData.name || !formData.email || !formData.phone || (!editingUser && !formData.password)) {
+      toast({ 
+        title: "Campos obrigatórios", 
+        description: `Por favor, preencha nome, email, telefone ${!editingUser ? 'e senha inicial' : ''}.`, 
+        variant: "destructive" 
+      });
       return;
     }
 
@@ -341,6 +348,20 @@ export default function UserManagement() {
                       onChange={e => setFormData({...formData, email: e.target.value})}
                     />
                   </div>
+
+                  {!editingUser && (
+                    <div className="space-y-2">
+                      <label className="text-sm font-semibold text-foreground uppercase tracking-wider text-[10px]">
+                        Senha Inicial *
+                      </label>
+                      <Input
+                        type="password"
+                        placeholder="Mínimo 6 caracteres"
+                        value={formData.password}
+                        onChange={e => setFormData({...formData, password: e.target.value})}
+                      />
+                    </div>
+                  )}
                 </div>
 
                 <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

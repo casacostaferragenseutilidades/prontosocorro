@@ -686,14 +686,40 @@ export const useListProfiles = () => {
   })
 }
 
+import { createClient } from '@supabase/supabase-js'
+
 export const useCreateProfile = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async (profile: any) => {
+    mutationFn: async ({ password, ...profile }: any) => {
+      let user_id = null;
+      
+      // Se fornecer senha, tenta criar no Auth primeiro
+      if (password) {
+        // Criamos um cliente temporário que NÃO persiste sessão no localStorage
+        // para não deslogar o administrador atual ao cadastrar um novo funcionário
+        const tempClient = createClient(
+          import.meta.env.VITE_SUPABASE_URL!,
+          import.meta.env.VITE_SUPABASE_ANON_KEY!,
+          { auth: { persistSession: false } }
+        );
+        
+        const { data: authData, error: authError } = await tempClient.auth.signUp({
+          email: profile.email,
+          password: password,
+          options: {
+            data: { name: profile.name }
+          }
+        });
+
+        if (authError) throw authError;
+        user_id = authData.user?.id;
+      }
+
       const { data, error } = await supabase
         .from('profiles')
-        .insert(profile)
+        .insert({ ...profile, user_id })
         .select()
         .single()
       if (error) throw error
