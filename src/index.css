@@ -1,0 +1,74 @@
+@import url('https://fonts.googleapis.com/css2?family=DM+Sans:ital,opsz,wght@0,9..40,100..1000;1,9..40,100..1000&family=Plus+Jakarta+Sans:ital,wght@0,200..800;1,200..800&display=swap');
+
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  :root {
+    /* Warm Professional Theme */
+    --background: 40 33% 98%;
+    --foreground: 20 20% 15%;
+    
+    --card: 0 0% 100%;
+    --card-foreground: 20 20% 15%;
+    
+    --popover: 0 0% 100%;
+    --popover-foreground: 20 20% 15%;
+    
+    /* Primary: Rich Amber/Orange */
+    --primary: 28 90% 55%;
+    --primary-foreground: 0 0% 100%;
+    
+    /* Secondary: Soft Warm Gray */
+    --secondary: 30 10% 90%;
+    --secondary-foreground: 20 20% 15%;
+    
+    --muted: 30 10% 94%;
+    --muted-foreground: 25 10% 45%;
+    
+    --accent: 35 100% 95%;
+    --accent-foreground: 28 90% 40%;
+    
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 100%;
+    
+    --success: 142 71% 45%;
+    --success-foreground: 0 0% 100%;
+    
+    --warning: 38 92% 50%;
+    --warning-foreground: 0 0% 100%;
+
+    --border: 30 15% 85%;
+    --input: 30 15% 85%;
+    --ring: 28 90% 55%;
+
+    --radius: 0.75rem;
+  }
+
+  * {
+    @apply border-border;
+  }
+  body {
+    @apply bg-background text-foreground antialiased font-sans;
+  }
+  h1, h2, h3, h4, h5, h6 {
+    @apply tracking-tight font-bold text-foreground;
+    font-family: 'Plus Jakarta Sans', sans-serif;
+  }
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+::-webkit-scrollbar-track {
+  background: transparent;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-muted-foreground/30 rounded-full;
+}
+::-webkit-scrollbar-thumb:hover {
+  @apply bg-muted-foreground/50;
+}
