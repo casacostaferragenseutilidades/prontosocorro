@@ -172,8 +172,8 @@ function NewSaleModal({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-all duration-300">
-      <div className="relative w-full max-w-5xl max-h-[95vh] flex flex-col bg-background rounded-2xl shadow-2xl overflow-hidden border border-border/50">
+    <div className="fixed inset-0 z-50 flex items-center justify-center lg:p-4 bg-black/60 backdrop-blur-sm transition-all duration-300">
+      <div className="relative w-full max-w-5xl h-[100dvh] lg:h-auto lg:max-h-[95vh] flex flex-col bg-background lg:rounded-2xl shadow-2xl overflow-hidden border-border/50 lg:border">
         {/* Header */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-border bg-primary text-primary-foreground shrink-0">
           <div className="flex items-center gap-3">
@@ -185,9 +185,9 @@ function NewSaleModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-hidden">
+        <div className="flex flex-col lg:flex-row flex-1 min-h-0 overflow-y-auto lg:overflow-hidden">
           {/* LEFT: Products */}
-          <div className="flex flex-col flex-1 min-h-0 border-b lg:border-b-0 lg:border-r border-border">
+          <div className="flex flex-col min-h-[50vh] lg:min-h-0 lg:flex-1 shrink-0 border-b lg:border-b-0 lg:border-r border-border">
             <div className="px-4 py-3 border-b border-border bg-secondary/20 shrink-0">
               <div className="relative">
                 <Search className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -231,7 +231,7 @@ function NewSaleModal({ onClose }: { onClose: () => void }) {
           </div>
 
           {/* RIGHT: Cart + Checkout */}
-          <div className="flex flex-col w-full lg:w-[400px] shrink-0 min-h-0">
+          <div className="flex flex-col w-full lg:w-[400px] shrink-0 min-h-[50vh] lg:min-h-0">
             {/* Customer selector */}
             <div className="px-4 py-3 border-b border-border bg-secondary/10 shrink-0">
               <label className="block text-xs font-semibold text-muted-foreground uppercase mb-2">Cliente</label>
@@ -561,7 +561,8 @@ export default function Sales() {
               </div>
             </div>
           </div>
-        <table className="w-full text-left border-collapse min-w-[700px]">
+          <div className="overflow-x-auto w-full">
+            <table className="w-full text-left border-collapse min-w-[700px]">
           <thead>
             <tr className="border-b border-border bg-secondary/30">
               <th className="p-4 font-semibold text-sm text-muted-foreground">ID / Data</th>
@@ -612,6 +613,7 @@ export default function Sales() {
             )}
           </tbody>
         </table>
+        </div>
         </Card>
       </div>
 
