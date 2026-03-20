@@ -28,8 +28,7 @@ export default function UserManagement() {
     name: '',
     email: '',
     phone: '',
-    role: 'user',
-    address: ''
+    role: 'user'
   });
 
   const handleOpenModal = (user: any = null) => {
@@ -39,8 +38,7 @@ export default function UserManagement() {
         name: user.name || '',
         email: user.email || '',
         phone: user.phone || '',
-        role: user.role || 'user',
-        address: user.address || ''
+        role: user.role || 'user'
       });
     } else {
       setEditingUser(null);
@@ -48,8 +46,7 @@ export default function UserManagement() {
         name: '',
         email: '',
         phone: '',
-        role: 'user',
-        address: ''
+        role: 'user'
       });
     }
     setIsModalOpen(true);
@@ -63,10 +60,17 @@ export default function UserManagement() {
 
     try {
       if (editingUser) {
-        await updateMutation.mutateAsync({ id: editingUser.id, ...formData });
+        await updateMutation.mutateAsync({ 
+          id: editingUser.id, 
+          ...formData,
+          role: formData.role as any 
+        });
         toast({ title: "Usuário atualizado", description: "As alterações foram salvas com sucesso." });
       } else {
-        await createMutation.mutateAsync(formData);
+        await createMutation.mutateAsync({
+          ...formData,
+          role: formData.role as any
+        });
         toast({ title: "Usuário cadastrado", description: "O novo usuário foi adicionado ao sistema." });
       }
       setIsModalOpen(false);
@@ -90,7 +94,7 @@ export default function UserManagement() {
       toast({
         title: "Funcionalidade limitada",
         description: "A exclusão direta de perfis está desativada por segurança. Utilize o status 'Inativo'.",
-        variant: "warning"
+        variant: "destructive"
       });
     }
   };
@@ -366,16 +370,7 @@ export default function UserManagement() {
                   </div>
                 </div>
 
-                <div className="space-y-2">
-                  <label className="text-sm font-semibold text-foreground uppercase tracking-wider text-[10px]">
-                    Endereço
-                  </label>
-                  <Input
-                    placeholder="Rua, número, cidade - estado"
-                    value={formData.address}
-                    onChange={e => setFormData({...formData, address: e.target.value})}
-                  />
-                </div>
+
 
                 <div className="flex justify-end space-x-3 pt-6 border-t border-border mt-4">
                   <Button variant="outline" onClick={() => setIsModalOpen(false)}>
