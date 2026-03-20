@@ -67,10 +67,11 @@ export default function UserManagement() {
 
     try {
       if (editingUser) {
+        const { password, ...updateData } = formData;
         await updateMutation.mutateAsync({ 
           id: editingUser.id, 
-          ...formData,
-          role: formData.role as any 
+          ...updateData,
+          role: updateData.role as any 
         });
         toast({ title: "Usuário atualizado", description: "As alterações foram salvas com sucesso." });
       } else {
