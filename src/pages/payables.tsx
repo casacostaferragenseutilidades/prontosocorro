@@ -74,8 +74,8 @@ const emptyForm: FormData = {
 // Removed custom usePayables hook
 
 export default function Payables() {
-  const { dataSource, isLoading, refetch } = useListAccountsPayable() as any;
-  const data = (dataSource || []).map((p: any) => ({
+  const { data: rawData, isLoading, refetch } = useListAccountsPayable();
+  const data = (rawData || []).map((p: any) => ({
     id: p.id,
     supplierId: p.supplier_id,
     supplierName: p.supplier?.name || null,
