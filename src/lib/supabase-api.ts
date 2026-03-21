@@ -633,6 +633,189 @@ export const useAddPayment = () => {
   })
 }
 
+export const useProcessReceivablePayment = () => {
+  const queryClient = useQueryClient()
+  
+  return useMutation({
+    mutationFn: async ({ id, amountPaid, discount, addition }: { id: string, amountPaid: number, discount: number, addition: number }) => {
+      // 1. Get current receivable
+      const { data: current, error: fetchError } = await supabase
+        .from('accounts_receivable')
+        .select('*')
+        .eq('id', id)
+        .single();
+      
+      if (fetchError || !current) throw new Error("Título não encontrado");
+
+      const baseAmount = Number(current.amount);
+      const expectedAmount = baseAmount - discount + addition;
+
+      // Se for negativo e for um crédito, só marcamos como baixado se ele quiser usar. Assumimos que a parcela é positiva.
+      if (amountPaid < expectedAmount) {
+        // Pagamento parcial
+        const remainingDifference = expectedAmount - amountPaid;
+        
+        // Atualiza a original com o saldo restante (pending)
+        const { error: updateError } = await supabase
+          .from('accounts_receivable')
+          .update({ 
+            amount: remainingDifference, 
+            notes: (current.notes ? current.notes + '\n' : '') + `Pagamento parcial de R$ ${amountPaid.toFixed(2)} registrado (Ref. original: R$ ${baseAmount.toFixed(2)}, Desc: R$ ${discount.toFixed(2)}, Acrésc: R$ ${addition.toFixed(2)})`
+          })
+          .eq('id', id);
+        
+        if (updateError) throw updateError;
+
+        // Insere a parte paga como um novo registro já baixado
+        const partialData = { ...current };
+        delete (partialData as any).id;
+        delete (partialData as any).created_at;
+        delete (partialData as any).updated_at;
+
+        const { error: insertError } = await supabase
+          .from('accounts_receivable')
+          .insert({
+            ...partialData,
+            amount: amountPaid,
+            status: 'paid',
+            payment_date: new Date().toISOString().split('T')[0],
+            description: current.description + ' (Parte Paga)',
+          });
+        
+        if (insertError) throw insertError;
+        
+      } else if (amountPaid === expectedAmount) {
+        // Pagamento exato
+        const { error: updateError } = await supabase
+          .from('accounts_receivable')
+          .update({ 
+            status: 'paid', 
+            payment_date: new Date().toISOString().split('T')[0],
+            amount: expectedAmount, 
+            notes: (current.notes ? current.notes + '\n' : '') + `Baixa total. Desc: R$ ${discount.toFixed(2)}, Acrésc: R$ ${addition.toFixed(2)}`
+          })
+          .eq('id', id);
+          
+        if (updateError) throw updateError;
+
+      } else {
+        // Pagamento a maior (gerar crédito para outra parcela)
+        const creditDifference = amountPaid - expectedAmount;
+        
+        // Atualiza a atual para pago
+        const { error: updateError } = await supabase
+          .from('accounts_receivable')
+          .update({ 
+            status: 'paid', 
+            payment_date: new Date().toISOString().split('T')[0],
+            amount: expectedAmount,
+            notes: (current.notes ? current.notes + '\n' : '') + `Baixa total (pago a maior R$ ${creditDifference.toFixed(2)}). Desc: R$ ${discount.toFixed(2)}, Acrésc: R$ ${addition.toFixed(2)}`
+          })
+          .eq('id', id);
+          
+        if (updateError) throw updateError;
+        
+        // Gerenciar crédito
+        if (current.customer_id) {
+          // Busca outras parcelas pendentes do mesmo cliente
+          const { data: nextPendings, error: pendingsError } = await supabase
+            .from('accounts_receivable')
+            .select('*')
+            .eq('customer_id', current.customer_id)
+            .eq('status', 'pending')
+            .neq('id', id)
+            .order('due_date', { ascending: true });
+            
+          if (!pendingsError && nextPendings && nextPendings.length > 0) {
+            let remainingCredit = creditDifference;
+            
+            for (const next of nextPendings) {
+              if (remainingCredit <= 0) break;
+              
+              const nextAmt = Number(next.amount);
+              
+              if (remainingCredit >= nextAmt) {
+                // Abate integralmente a próx parcela
+                await supabase
+                  .from('accounts_receivable')
+                  .update({
+                    status: 'paid',
+                    payment_date: new Date().toISOString().split('T')[0],
+                    notes: (next.notes ? next.notes + '\n' : '') + `Baixa automática (crédito de pagamento anterior excedente).`
+                  })
+                  .eq('id', next.id);
+                  
+                remainingCredit -= nextAmt;
+              } else {
+                // Abate parcial
+                const newRemaining = nextAmt - remainingCredit;
+                
+                await supabase
+                  .from('accounts_receivable')
+                  .update({
+                    amount: newRemaining,
+                    notes: (next.notes ? next.notes + '\n' : '') + `Abatimento parcial (crédito automático de R$ ${remainingCredit.toFixed(2)})`
+                  })
+                  .eq('id', next.id);
+                  
+                const abatedData = { ...next };
+                delete (abatedData as any).id;
+                delete (abatedData as any).created_at;
+                delete (abatedData as any).updated_at;
+
+                await supabase
+                  .from('accounts_receivable')
+                  .insert({
+                    ...abatedData,
+                    amount: remainingCredit,
+                    status: 'paid',
+                    payment_date: new Date().toISOString().split('T')[0],
+                    description: next.description + ' (Abatimento por Crédito)'
+                  });
+                  
+                remainingCredit = 0;
+              }
+            }
+            
+            // Se ainda sobrar crédito, cria registro em aberto com valor negativo
+            if (remainingCredit > 0) {
+              await supabase
+                .from('accounts_receivable')
+                .insert({
+                  customer_id: current.customer_id,
+                  sale_id: current.sale_id,
+                  description: `Crédito Aberto (Restante de pagamento a maior)`,
+                  amount: -1 * remainingCredit,
+                  due_date: new Date().toISOString().split('T')[0],
+                  status: 'pending',
+                });
+            }
+
+          } else {
+            // Se não houver outras parcelas pendentes, cria o crédito
+            await supabase
+              .from('accounts_receivable')
+              .insert({
+                customer_id: current.customer_id,
+                sale_id: current.sale_id,
+                description: `Crédito Gerado (Pagou a maior)`,
+                amount: -1 * creditDifference,
+                due_date: new Date().toISOString().split('T')[0],
+                status: 'pending',
+              });
+          }
+        }
+      }
+      return true;
+    },
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: getListAccountsReceivableQueryKey() });
+      queryClient.invalidateQueries({ queryKey: ['dashboard'] });
+      queryClient.invalidateQueries({ queryKey: ['sales'] });
+    }
+  })
+}
+
 // Cash Flow Entries
 export const getListCashFlowEntriesQueryKey = () => ['cash-flow-entries']
 

@@ -6,10 +6,8 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useToast } from "@/hooks/use-toast";
 import { 
   useListAccountsReceivable, 
-  useCreateAccountsReceivable, 
   getListAccountsReceivableQueryKey,
-  usePayInstallment,
-  useAddPayment,
+  useProcessReceivablePayment,
   getGetDashboardQueryKey,
   getListSalesQueryKey
 } from "@/lib/api";
@@ -58,13 +56,15 @@ export default function Receivables() {
   
   const queryClient = useQueryClient();
   const { toast } = useToast();
-  const payInstallmentMutation = usePayInstallment();
-  const addPaymentMutation = useAddPayment();
+  const processPaymentMutation = useProcessReceivablePayment();
 
   const [filter, setFilter] = useState<"all" | "pending" | "overdue" | "paid">("all");
   const [search, setSearch] = useState("");
-  const [payingFiadoId, setPayingFiadoId] = useState<string | null>(null);
-  const [fiadoAmount, setFiadoAmount] = useState("");
+  
+  const [payingReceivable, setPayingReceivable] = useState<Receivable | null>(null);
+  const [payAmount, setPayAmount] = useState("");
+  const [discountAmount, setDiscountAmount] = useState("");
+  const [additionAmount, setAdditionAmount] = useState("");
 
   const filtered = data.filter(r => {
     if (filter !== "all" && r.status !== filter) return false;
@@ -76,38 +76,34 @@ export default function Receivables() {
   const totalOverdue = data.filter(r => r.status === "overdue").reduce((s, r) => s + r.amount, 0);
   const countPending = data.filter(r => r.status === "pending" || r.status === "overdue").length;
 
-  const handlePayInstallment = async (r: Receivable) => {
-    if (!r.installmentId) return;
-    try {
-      await payInstallmentMutation.mutateAsync({ id: r.installmentId });
-      toast({ title: "Parcela recebida com sucesso!" });
-      refetch();
-      queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
-    } catch (e: unknown) {
-      toast({ title: "Erro", description: e instanceof Error ? e.message : "", variant: "destructive" });
-    }
+  const handleOpenPayment = (r: Receivable) => {
+    setPayingReceivable(r);
+    setPayAmount(r.amount.toString());
+    setDiscountAmount("");
+    setAdditionAmount("");
   };
 
-  const handlePayFiado = async (e: React.FormEvent) => {
+  const handleProcessPayment = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!payingFiadoId || !fiadoAmount) return;
+    if (!payingReceivable || !payAmount) return;
+    
     try {
-      await addPaymentMutation.mutateAsync({ 
-        id: payingFiadoId, 
-        amount: parseFloat(fiadoAmount.replace(",", ".")) 
+      await processPaymentMutation.mutateAsync({ 
+        id: payingReceivable.id, 
+        amountPaid: parseFloat(payAmount.replace(",", ".") || "0"),
+        discount: parseFloat(discountAmount.replace(",", ".") || "0"),
+        addition: parseFloat(additionAmount.replace(",", ".") || "0")
       });
-      toast({ title: "Pagamento registrado!" });
-      setPayingFiadoId(null);
-      setFiadoAmount("");
+      toast({ title: "Pagamento processado com sucesso!" });
+      setPayingReceivable(null);
+      setPayAmount("");
+      setDiscountAmount("");
+      setAdditionAmount("");
       refetch();
-      queryClient.invalidateQueries({ queryKey: getListSalesQueryKey() });
-      queryClient.invalidateQueries({ queryKey: getGetDashboardQueryKey() });
     } catch (e: unknown) {
-      toast({ title: "Erro", description: e instanceof Error ? e.message : "", variant: "destructive" });
+      toast({ title: "Erro ao processar", description: e instanceof Error ? e.message : "", variant: "destructive" });
     }
   };
-
-  const fiadoForPayment = data.find(r => r.type === "fiado" && r.saleId === payingFiadoId);
 
   return (
     <Layout>
@@ -275,15 +271,9 @@ export default function Receivables() {
                   <td className="p-4 text-right font-bold text-base">{formatCurrency(r.amount)}</td>
                   <td className="p-4 text-right">
                     {r.status !== "paid" && (
-                      r.type === "installment" ? (
-                        <Button size="sm" onClick={() => handlePayInstallment(r)} isLoading={payInstallmentMutation.isPending}>
-                          Receber
-                        </Button>
-                      ) : (
-                        <Button size="sm" variant="outline" onClick={() => setPayingFiadoId(r.id)}>
-                          Receber
-                        </Button>
-                      )
+                      <Button size="sm" onClick={() => handleOpenPayment(r)}>
+                        Receber
+                      </Button>
                     )}
                   </td>
                 </tr>
@@ -294,29 +284,83 @@ export default function Receivables() {
       </div>
     </Card>
 
-      {/* Pay fiado modal */}
-      {payingFiadoId && (
+      {/* Payment Modal */}
+      {payingReceivable && (
         <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <Card className="w-full max-w-md p-6">
-            <h2 className="text-xl font-bold mb-1">Registrar Recebimento</h2>
-            <p className="text-muted-foreground text-sm mb-5">
-              Venda #{payingFiadoId} — {fiadoForPayment?.customerName}
-              {fiadoForPayment && <strong className="ml-2">({formatCurrency(fiadoForPayment.amount)} em aberto)</strong>}
+          <Card className="w-full max-w-md p-6 shadow-2xl border-border/50 animate-in fade-in zoom-in duration-200">
+            <h2 className="text-xl font-bold mb-1 text-foreground">Registrar Recebimento</h2>
+            <p className="text-muted-foreground text-sm mb-5 pb-4 border-b border-border">
+              {payingReceivable.customerName} - {payingReceivable.description}
             </p>
-            <form onSubmit={handlePayFiado} className="space-y-4">
-              <div>
-                <label className="block text-sm font-medium mb-1">Valor Recebido (R$)</label>
-                <input
-                  type="number" step="0.01" min="0.01"
-                  className="w-full h-11 rounded-xl border-2 border-border bg-background px-3 text-sm focus:outline-none focus:border-primary transition-all"
-                  value={fiadoAmount}
-                  onChange={e => setFiadoAmount(e.target.value)}
-                  autoFocus
-                />
+            
+            <form onSubmit={handleProcessPayment} className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Desconto (R$)</label>
+                  <input
+                    type="number" step="0.01" min="0" placeholder="0.00"
+                    className="w-full h-11 rounded-xl border-2 border-border bg-background px-3 text-sm focus:outline-none focus:border-primary transition-all text-emerald-600 font-medium"
+                    value={discountAmount}
+                    onChange={e => setDiscountAmount(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-1">Acréscimo (R$)</label>
+                  <input
+                    type="number" step="0.01" min="0" placeholder="0.00"
+                    className="w-full h-11 rounded-xl border-2 border-border bg-background px-3 text-sm focus:outline-none focus:border-red-500 transition-all text-red-600 font-medium"
+                    value={additionAmount}
+                    onChange={e => setAdditionAmount(e.target.value)}
+                  />
+                </div>
               </div>
-              <div className="flex justify-end gap-3 pt-2">
-                <Button variant="ghost" type="button" onClick={() => { setPayingFiadoId(null); setFiadoAmount(""); }}>Cancelar</Button>
-                <Button type="submit" isLoading={addPaymentMutation.isPending}>Confirmar</Button>
+
+              <div className="bg-secondary/20 p-4 rounded-xl border border-border/50">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-sm font-medium text-muted-foreground">Valor Original:</span>
+                  <span className="text-sm font-semibold">{formatCurrency(payingReceivable.amount)}</span>
+                </div>
+                <div className="flex justify-between items-center pt-2 border-t border-border/50 mt-2">
+                  <span className="text-sm font-bold">Valor Atualizado:</span>
+                  <span className="text-lg font-bold text-primary">
+                    {formatCurrency(
+                      payingReceivable.amount 
+                      - (parseFloat(discountAmount.replace(",", ".") || "0"))
+                      + (parseFloat(additionAmount.replace(",", ".") || "0"))
+                    )}
+                  </span>
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-sm font-bold mb-1">Valor Que Foi Pago (R$)</label>
+                <div className="relative">
+                  <span className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground font-medium">R$</span>
+                  <input
+                    type="number" step="0.01" min="0.01"
+                    className="w-full h-12 rounded-xl border-2 border-primary/50 bg-primary/5 px-9 text-lg font-bold focus:outline-none focus:border-primary transition-all text-primary"
+                    value={payAmount}
+                    onChange={e => setPayAmount(e.target.value)}
+                    autoFocus
+                  />
+                </div>
+                {parseFloat(payAmount.replace(",", ".") || "0") < (payingReceivable.amount - parseFloat(discountAmount || "0") + parseFloat(additionAmount || "0")) && (
+                  <p className="text-xs text-amber-600 mt-2 font-medium bg-amber-50 p-2 rounded-lg border border-amber-100">
+                    Aviso: O pagamento é menor que o valor atualizado. A diferença continuará como pendente.
+                  </p>
+                )}
+                {parseFloat(payAmount.replace(",", ".") || "0") > (payingReceivable.amount - parseFloat(discountAmount || "0") + parseFloat(additionAmount || "0")) && (
+                  <p className="text-xs text-blue-600 mt-2 font-medium bg-blue-50 p-2 rounded-lg border border-blue-100">
+                    Aviso: O pagamento é maior. O saldo restante será convertido em crédito para o cliente.
+                  </p>
+                )}
+              </div>
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
+                <Button variant="ghost" type="button" onClick={() => setPayingReceivable(null)}>Cancelar</Button>
+                <Button type="submit" isLoading={processPaymentMutation.isPending} className="font-bold">
+                  Confirmar Recebimento
+                </Button>
               </div>
             </form>
           </Card>
