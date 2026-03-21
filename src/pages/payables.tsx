@@ -103,6 +103,8 @@ export default function Payables() {
   const [showForm, setShowForm] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
   const [form, setForm] = useState<FormData>(emptyForm);
+  const [payingAccount, setPayingAccount] = useState<Payable | null>(null);
+  const [paymentDate, setPaymentDate] = useState<string>(new Date().toISOString().split("T")[0]);
 
   const apiBase = `${import.meta.env.BASE_URL}api/payables`;
 
@@ -158,10 +160,18 @@ export default function Payables() {
     } catch { toast({ title: "Erro ao salvar", variant: "destructive" }); }
   };
 
-  const handlePay = async (id: string) => {
+  const handleOpenPay = (p: Payable) => {
+    setPayingAccount(p);
+    setPaymentDate(new Date().toISOString().split("T")[0]);
+  };
+
+  const handleConfirmPay = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!payingAccount || !paymentDate) return;
     try {
-      await payMutation.mutateAsync({ id });
+      await payMutation.mutateAsync({ id: payingAccount.id, paymentDate });
       toast({ title: "Conta marcada como paga!" });
+      setPayingAccount(null);
     } catch { toast({ title: "Erro ao pagar", variant: "destructive" }); }
   };
 
@@ -295,6 +305,7 @@ export default function Payables() {
                   <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Categoria</th>
                   <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Fornecedor</th>
                   <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Vencimento</th>
+                  <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Pagamento</th>
                   <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider">Status</th>
                   <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider text-right">Valor</th>
                   <th className="p-4 font-bold text-xs text-muted-foreground uppercase tracking-wider text-right">Ações</th>
@@ -302,10 +313,10 @@ export default function Payables() {
               </thead>
               <tbody className="divide-y divide-border">
             {isLoading ? (
-              <tr><td colSpan={7} className="p-8 text-center text-muted-foreground">Carregando...</td></tr>
+              <tr><td colSpan={8} className="p-8 text-center text-muted-foreground">Carregando...</td></tr>
             ) : filtered.length === 0 ? (
               <tr>
-                <td colSpan={7} className="p-16 text-center">
+                <td colSpan={8} className="p-16 text-center">
                   <TrendingDown className="w-12 h-12 text-muted-foreground mx-auto mb-4 opacity-30" />
                   <p className="text-lg font-medium">Nenhuma conta encontrada.</p>
                   <p className="text-muted-foreground text-sm mt-1">Clique em "Nova Conta" para cadastrar.</p>
@@ -339,13 +350,23 @@ export default function Payables() {
                       </div>
                     </td>
                     <td className="p-4">
+                      {p.paidAt ? (
+                        <div className="flex items-center gap-1.5 text-sm text-emerald-600 font-medium">
+                          <CheckCircle2 className="w-3.5 h-3.5" />
+                          {formatDate(p.paidAt)}
+                        </div>
+                      ) : (
+                        <span className="text-muted-foreground text-sm italic">-</span>
+                      )}
+                    </td>
+                    <td className="p-4">
                       <Badge variant={STATUS_VARIANT[p.status] ?? "default"}>{STATUS_LABEL[p.status] ?? p.status}</Badge>
                     </td>
                     <td className="p-4 text-right font-bold text-base">{formatCurrency(p.amount)}</td>
                     <td className="p-4">
                       <div className="flex items-center gap-2 justify-end">
                         {p.status !== "paid" && (
-                          <Button size="sm" onClick={() => handlePay(p.id)} isLoading={payMutation.isPending && payMutation.variables?.id === p.id}>
+                          <Button size="sm" onClick={() => handleOpenPay(p)}>
                             <CheckCircle2 className="w-3.5 h-3.5 mr-1" /> Pagar
                           </Button>
                         )}
@@ -448,6 +469,35 @@ export default function Payables() {
                 <Button variant="ghost" type="button" onClick={() => setShowForm(false)} className="font-bold">Cancelar</Button>
                 <Button type="submit" isLoading={createMutation.isPending || updateMutation.isPending} className="px-8 font-bold">
                   {editingId ? "Salvar Alterações" : "Cadastrar Conta"}
+                </Button>
+              </div>
+            </form>
+          </Card>
+        </div>
+      )}
+
+      {/* Payment Modal */}
+      {payingAccount && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <Card className="w-full max-w-md p-6 shadow-2xl border-border/50 animate-in fade-in zoom-in duration-200">
+            <h2 className="text-xl font-bold mb-1 text-foreground">Confirmar Pagamento</h2>
+            <p className="text-muted-foreground text-sm mb-5 pb-4 border-b border-border">
+              {payingAccount.description} <strong className="ml-1 text-foreground">({formatCurrency(payingAccount.amount)})</strong>
+            </p>
+            
+            <form onSubmit={handleConfirmPay} className="space-y-4">
+              <Input
+                label="Data do Pagamento"
+                type="date"
+                value={paymentDate}
+                onChange={e => setPaymentDate(e.target.value)}
+                required
+              />
+
+              <div className="flex justify-end gap-3 pt-4 border-t border-border mt-6">
+                <Button variant="ghost" type="button" onClick={() => setPayingAccount(null)}>Cancelar</Button>
+                <Button type="submit" isLoading={payMutation.isPending} className="font-bold">
+                  Registrar Pagamento
                 </Button>
               </div>
             </form>

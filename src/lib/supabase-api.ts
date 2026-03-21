@@ -533,10 +533,10 @@ export const usePayAccountsPayable = () => {
   const queryClient = useQueryClient()
   
   return useMutation({
-    mutationFn: async ({ id }: { id: string }) => {
+    mutationFn: async ({ id, paymentDate }: { id: string, paymentDate?: string }) => {
       const { data, error } = await supabase
         .from('accounts_payable')
-        .update({ status: 'paid', payment_date: new Date().toISOString().split('T')[0] })
+        .update({ status: 'paid', payment_date: paymentDate || new Date().toISOString().split('T')[0] })
         .eq('id', id)
         .select()
         .single()
